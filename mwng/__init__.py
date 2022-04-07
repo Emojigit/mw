@@ -16,7 +16,9 @@ __author__ = "Emojipypi"
 
 # Imports
 import requests
-from typing import Union, Iterable
+from typing import Union, Iterable, BinaryIO
+from validators import url as vaURL
+from simplejson.errors import JSONDecodeError
 
 
 """
@@ -51,8 +53,6 @@ class MWLoginError(MWAPIError):
         self.message = "Login Failed: {}".format(message)
         super().__init__(dump,self.message)
 
-class MWEditError(MWAPIError):
-    pass
 
 """
     A callable string!
@@ -116,28 +116,44 @@ class WMSitesBase:
     meta = CallableString("https://meta.wikimedia.org/w/api.php")
 WMSites = WMSitesBase()
 
+class MirahezeSitesBase:
+    def __call__(self,site: str):
+        return "https://{}.miraheze.org/w/api.php".format(site)
+    meta = CallableString("https://meta.miraheze.org/w/api.php")
+
+MirahezeSites = MirahezeSitesBase()
+
 """
     Holy API object.
 """
 class API:
-    def __init__(self,site):
-        self.S = requests.Session()
+    def __init__(self,site: str,session: requests.Session = requests.Session()):
+        self.S = session
         self.site = site
     def get(self,body: dict):
         req = body.copy()
         req["errorformat"] = "plaintext"
         req["format"] = "json"
         R = self.S.get(url=self.site, params=req)
-        DATA = R.json()
+        try:
+            DATA = R.json()
+        except JSONDecodeError:
+            print(R.text)
+            raise
         if "errors" in DATA:
             raise MWAPIError(DATA)
         return DATA
-    def post(self,body: dict):
+    def post(self,body: dict,files: Union[dict,None] = None):
         req = body.copy()
         req["errorformat"] = "plaintext"
         req["format"] = "json"
-        R = self.S.post(url=self.site, data=req)
-        DATA = R.json()
+        headers = None
+        R = self.S.post(url=self.site, data=req, files=files)
+        try:
+            DATA = R.json()
+        except JSONDecodeError:
+            print(R.text)
+            raise
         if "errors" in DATA:
             raise MWAPIError(DATA)
         return DATA
@@ -167,7 +183,7 @@ class API:
         if DATA["login"]["result"] != "Success":
             raise MWLoginError(DATA["login"]["result"],DATA)
         return DATA
-    def edit(self,page: Union[str,int], content: Union[dict,str], token: Union[str,None] = None, ts: Union[str,bool] = True):
+    def edit(self,page: Union[str,int], content: Union[dict,str], summary: str = "", token: Union[str,None] = None, ts: Union[str,bool] = True):
         pageType = "pageid" if isinstance(page,int) else "title"
         req = content.copy() if isinstance(content,dict) else {"text": content}
         tmp_ts = ts
@@ -178,11 +194,34 @@ class API:
         req["token"] = token
         req["starttimestamp"] = tmp_ts
         req["action"] = "edit"
+        req["summary"] = summary
         req[pageType] = page
         DATA = self.post(req)
-        if "errors" in DATA:
-            raise MWEditError(DATA)
         return DATA
+    def upload(self, image: Union[str,BinaryIO], filename: str, text: str = "", token: str = ""):
+        req = {
+            "action": "upload",
+            "ignorewarnings": 1
+        }
+        req["token"] = self.csrf()[0] if token == "" else token
+        req["filename"] = filename
+        req["comment"] = text
+        files = {}
+        fileobj = None
+        if isinstance(image, str):
+            if vaURL(image):
+                req["url"] = image
+                DATA = self.post(req)
+                return DATA
+            fileobj = open(image, 'rb')
+            files = {"file": (filename,fileobj,'multipart/form-data')}
+        else:
+            files = {"file": (filename,image,'multipart/form-data')}
+        DATA = self.post(req,files)
+        if fileobj != None: fileobj.close()
+        return DATA
+
+
 
 MWAPI = API
 
