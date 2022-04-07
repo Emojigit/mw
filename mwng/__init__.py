@@ -11,7 +11,7 @@
 """
 
 # Metadata
-__version__ = "0.0.1"
+__version__ = "0.0.7"
 __author__ = "Emojipypi"
 
 # Imports
@@ -147,7 +147,6 @@ class API:
         req = body.copy()
         req["errorformat"] = "plaintext"
         req["format"] = "json"
-        headers = None
         R = self.S.post(url=self.site, data=req, files=files)
         try:
             DATA = R.json()
@@ -165,7 +164,9 @@ class API:
             "type": type
         }
         DATA = self.get(req)
-        return DATA['query']['tokens'][type + "token"], (DATA["curtimestamp"] if curtimestamp else None)
+        if curtimestamp:
+            return DATA['query']['tokens'][type + "token"], DATA["curtimestamp"]
+        return DATA['query']['tokens'][type + "token"]
     def csrf(self):
         token, ts = self.token("csrf",True)
         return token, ts
@@ -220,6 +221,19 @@ class API:
         DATA = self.post(req,files)
         if fileobj != None: fileobj.close()
         return DATA
+    def watch(self, pages: Union[str,Iterable[str]], expiry: str = "infinite", unwatch: bool = False, token: str = ""):
+        token = self.token("watch") if token == "" else token
+        req = {
+            "action": "watch",
+            "titles": pages,
+            "token": token,
+            "unwatch": None if not unwatch else True
+        }
+        DATA = self.post(req)
+        return DATA
+    def unwatch(self, pages: Union[str,Iterable[str]], token: str = ""):
+        return self.watch(pages=pages,unwatch=True,token=token)
+
 
 
 

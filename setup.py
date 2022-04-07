@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="mwng",
-    version="0.0.6",
+    version="0.0.7",
     author="Emojipypi",
     author_email="yiufamily.hh@gmail.com",
     description="MediaWiki API for Python 3",
