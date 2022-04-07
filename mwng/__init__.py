@@ -11,7 +11,7 @@
 """
 
 # Metadata
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 __author__ = "Emojipypi"
 
 # Imports
@@ -132,6 +132,7 @@ class API:
         self.site = site
     def get(self,body: dict):
         req = body.copy()
+        req["uselang"] = "en"
         req["errorformat"] = "plaintext"
         req["format"] = "json"
         R = self.S.get(url=self.site, params=req)
@@ -145,6 +146,7 @@ class API:
         return DATA
     def post(self,body: dict,files: Union[dict,None] = None):
         req = body.copy()
+        req["uselang"] = "en"
         req["errorformat"] = "plaintext"
         req["format"] = "json"
         R = self.S.post(url=self.site, data=req, files=files)
@@ -233,5 +235,45 @@ class API:
         return DATA
     def unwatch(self, pages: Union[str,Iterable[str]], token: str = ""):
         return self.watch(pages=pages,unwatch=True,token=token)
+    def block(self, user: Union[str,int], expiry: str = "never", reason: str = "", token: str = "", anononly: bool = True, nocreate: bool = True, autoblock: bool = True, noemail: bool = False, hidename: bool = False, allowusertalk: bool = True, reblock: bool = False, watchuser: bool = False, watchlistexpiry: str = "never", pagerestrictions: list = [], namespacerestrictions: list = []):
+        if token == "":
+            token = self.csrf()[0]
+        if isinstance(user,int):
+            user = "#{}".format(user)
+        req = {
+            "action": "block",
+            "user": user,
+            "expiry": expiry,
+            "reason": reason,
+            "anononly": anononly,
+            "nocreate": nocreate,
+            "autoblock": autoblock,
+            "noemail": noemail,
+            "hidename": hidename,
+            "allowusertalk": allowusertalk,
+            "reblock": reblock,
+            "watchuser": watchuser,
+            "watchlistexpiry": watchlistexpiry if watchuser else None,
+            "partial": True if len(pagerestrictions) + len(namespacerestrictions) != 0 else False,
+            "pagerestrictions": pagerestrictions,
+            "namespacerestrictions": namespacerestrictions,
+            "token": token
+        }
+        DATA = self.post(req)
+        return DATA
+    def unblock(self, user: Union[str,int,None] = None, reason: str = "", token: str = "", blockid: Union[int,None] = None):
+        if token == "":
+            token = self.csrf()[0]
+        if isinstance(user,int):
+            user = "#{}".format(user)
+        req = {
+            "action": "unblock",
+            "user": user,
+            "id": blockid,
+            "reason": reason,
+            "token": token
+        }
+        DATA = self.post(req)
+        return DATA
 
 MWAPI = API
