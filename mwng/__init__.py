@@ -234,10 +234,4 @@ class API:
     def unwatch(self, pages: Union[str,Iterable[str]], token: str = ""):
         return self.watch(pages=pages,unwatch=True,token=token)
 
-
-
-
 MWAPI = API
-
-
-
