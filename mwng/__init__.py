@@ -11,7 +11,7 @@
 """
 
 # Metadata
-__version__ = "0.0.8"
+__version__ = "0.0.10"
 __author__ = "Emojipypi"
 
 # Imports
@@ -162,7 +162,7 @@ class API:
         req = {
             "action": "query",
             "meta": "tokens",
-            "curtimestamp": curtimestamp,
+            "curtimestamp": (True if curtimestamp else None),
             "type": type
         }
         DATA = self.get(req)
@@ -186,7 +186,7 @@ class API:
         if DATA["login"]["result"] != "Success":
             raise MWLoginError(DATA["login"]["result"],DATA)
         return DATA
-    def edit(self,page: Union[str,int], content: Union[dict,str], summary: str = "", token: Union[str,None] = None, ts: Union[str,bool] = True):
+    def edit(self,page: Union[str,int], content: Union[dict,str], summary: str = "", token: Union[str,None] = None, ts: str = ""):
         pageType = "pageid" if isinstance(page,int) else "title"
         req = content.copy() if isinstance(content,dict) else {"text": content}
         tmp_ts = ts
@@ -271,6 +271,15 @@ class API:
             "user": user,
             "id": blockid,
             "reason": reason,
+            "token": token
+        }
+        DATA = self.post(req)
+        return DATA
+    def logout(self, token: str = ""):
+        if token == "":
+            token = self.csrf()[0]
+        req = {
+            "action": "logout",
             "token": token
         }
         DATA = self.post(req)
